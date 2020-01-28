@@ -1,12 +1,12 @@
 #----------------------------------------------------------------------------------------------
 # Motivating example ME_MSM using NHANES data
 #----------------------------------------------------------------------------------------------
-require(RNHANES)
+#require(RNHANES)
 require(tidyverse)
 require(ipw)
 require(survey)
-nhanes_dir <- paste0(getwd(), "/nhanes")
-figures_dir <- paste0(getwd(), "/figures")
+nhanes_dir <- "./nhanes"
+figures_dir <- "./figures"
 
 # Load NHANES Data-----------------------------------------------------------------------------
 # 2013-2014------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ figures_dir <- paste0(getwd(), "/figures")
 # DataF <- Reduce(function(x, y) merge(x, y, by="SEQN"), Data)
 # DataF <- DataF[, !duplicated(colnames(DataF))]
 # NROW(DataF) #6266 objects
-#saveRDS(DataF, file = paste0(nhanes_dir, "/NHANES.rds"))
+# saveRDS(DataF, file = paste0(nhanes_dir, "/NHANES.rds"))
 DataF <- readRDS(file = paste0(nhanes_dir, "/NHANES.rds"))
 # 2011-2012------------------------------------------------------------------------------------
 # Data2 <- nhanes_load_data(c("BMX","BPX","WHQ"), "2011-2012", demographics = F)
@@ -207,12 +207,12 @@ upper_msm_me <- fit_msm_me$coefficients[2] + qnorm(0.975) * summary(fit_msm_me)$
 
 # Sensitivity analysis------------------------------------------------------------------------
 # Parameters in data--------------------------------------------------------------------------
-#in a sens analyse, you'll know:
+# in a sens analyse, you'll know:
 ell_data <- mean(DataS_s_c$bmi_self_c) #P(L*=1) = 0.77 (l)
 pi_star_1_data <- mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 1]) #P(A=1|L*=1) = 0.44 (pi_star_1)
 pi_star_0_data <- mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 0]) #P(A=1|L*=0) = 0.32 (pi_star_0)
 omega_data <- mean(DataS_s_c$bpdrug) #P(A)=0.41
-#you'll assume:
+# you'll assume:
 # We know what p_1, p_0 and lambda = P(L=1) is in our data
 # mean(DataS_s_c$bmi_self_c[DataS_s_c$bmi_c == 0]) #p_0=0.08
 # mean(DataS_s_c$bmi_self_c[DataS_s_c$bmi_c == 1]) #p_1=0.94
@@ -274,57 +274,113 @@ DataS_s_c$q <- with(DataS_s_c, bpdrug * bmi_self_c)
 beta_star_cm <- fit_adj_me$coef[2]
 u1 <- lm(q ~ bpdrug + bmi_self_c, data = DataS_s_c)$coef[2]
 
-sens_msm <- function(pi_star_0, pi_star_1, ell, p_0, p_1, gamma, beta_star){
-  bias_msm <- gamma * (1 - ell) * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 0) - phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 0)) +
-    gamma * ell * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 1) - phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 1))
+# sensitivity analysis msm 
+sens_msm <- function(df){
+  pi_star_0 <- df["pi_star_0"]
+  pi_star_1 <- df["pi_star_1"]
+  ell <- df["ell"]
+  p_0 <- df["p_0"]
+  p_1 <- df["p_1"]
+  gamma <- df["gamma"]
+  beta_star <- df["beta_star"]
+  bias_msm <- gamma * (1 - ell) * 
+    (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 0) - 
+       phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 0)) +
+    gamma * ell * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 1) - 
+                     phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 1))
   beta_msm <- beta_star - bias_msm
   return(c(bias = unname(bias_msm), beta = unname(beta_msm)))}
-sens_msm(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, gamma, beta_star)
+df <- data.frame("pi_star_0" = pi_star_0_data, 
+                      "pi_star_1" = pi_star_1_data, 
+                      "ell" = ell_data, 
+                      "p_0" = p_0, 
+                      "p_1" = p_1, 
+                      "gamma" = gamma, 
+                      "beta_star" = beta_star)
+sens_msm(df)
 
-sens_cm <- function(pi_star_0, pi_star_1, ell, p_0, p_1, gamma, beta_star, u1){
-  bias_cm <- gamma * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 0) - phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 0)) * (1 - u1) +
-    gamma * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 1) - phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 1)) * u1
+# sensitivity analysis conditional model
+sens_cm <- function(df){
+  pi_star_0 <- df["pi_star_0"]
+  pi_star_1 <- df["pi_star_1"]
+  ell <- df["ell"]
+  p_0 <- df["p_0"]
+  p_1 <- df["p_1"]
+  gamma <- df["gamma"]
+  beta_star <- df["beta_star"]
+  u1 <- df["u1"]
+  bias_cm <- gamma * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 0) - 
+                        phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 0)) * 
+    (1 - u1) + gamma * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 1) - 
+                          phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 1)) * u1
   beta_cm <- beta_star_cm - bias_cm
   return(c(bias = unname(bias_cm), beta = unname(beta_cm)))}
-sens_cm(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, gamma, beta_star, u1)
+df$u1 <- u1
+sens_cm(df)
 
-p_0_range <- seq(from = 0.02, to = 0.10, by = 0.01)
-p_1_range <- seq(from = 0.90, to = 0.98, by = 0.01)
-dim_p0 <- NROW(p_0_range)
-dim_p1 <- NROW(p_1_range)
-out <- data.frame(p_0 = numeric(n <- dim_p0 * dim_p1),
-                  p_1 = numeric(n),
-                  bias_msm = numeric(n),
-                  beta_msm = numeric(n), 
-                  bias_cm = numeric(n),
-                  beta_cm = numeric(n))
-for(k in 1:dim_p0){
-  p_0 <- p_0_range[k] 
-  for(i in 1:dim_p1){
-    p_1 <- p_1_range[i]
-    sens <- sens_msm(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, gamma, beta_star)
-    sens_condmod <- sens_cm(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, gamma, beta_star, u1)
-    ind <- {(k-1)*dim_p1 + i}
-    out[ind, 'p_0'] <- p_0
-    out[ind, 'p_1'] <- p_1
-    out[ind, 3:4] <- sens
-    out[ind, 5:6] <- sens_condmod}}
-mean(out$bias_msm)
-median(out$bias_msm)
-var(out$bias_msm)
-quantile(out$bias_msm)
+# sample p_0 and p_1 from a beta distribution
+p_0_sample <- 1 - rbeta(n = 50, 15, 2)
+p_1_sample <- rbeta(n = 50, 15, 2)
+parGridBeta <- expand.grid("p_0" = p_0_sample, "p_1" = p_1_sample)
+parGridBeta$pi_star_0 <- pi_star_0_data
+parGridBeta$pi_star_1 <- pi_star_1_data
+parGridBeta$ell <- ell_data
+parGridBeta$gamma <- gamma
+parGridBeta$beta_star <- beta_star
+parGridBeta$u1 <- u1
+sensResCmBeta <- apply(parGridBeta, 1, sens_cm)
+sensResMsmBeta <- apply(parGridBeta, 1, sens_msm)
+parGridBeta$bias_cm <- sensResCmBeta[1,]
+parGridBeta$beta_cm <- sensResCmBeta[2,]
+parGridBeta$bias_msm <- sensResMsmBeta[1,]
+parGridBeta$beta_msm <- sensResMsmBeta[2,]
 
-png(paste0(figures_dir, "/sensanalyse.png"), width = 6, height = 4, units = 'in', res = 300)
+# sample p_0 and p_1 from a uniform distribution
+p_0_sample <- seq(from = 0.02, to = 0.10, length.out = 50)
+p_1_sample <- seq(from = 0.90, to = 0.98, length.out = 50)
+#p_0_sample <- runif(n = 50, min = 0.02, max = 0.10)
+#p_1_sample <- runif(n = 50, min = 0.90, max = 0.98)
+parGridUnif <- expand.grid("p_0" = p_0_sample, "p_1" = p_1_sample)
+parGridUnif$pi_star_0 <- pi_star_0_data
+parGridUnif$pi_star_1 <- pi_star_1_data
+parGridUnif$ell <- ell_data
+parGridUnif$gamma <- gamma
+parGridUnif$beta_star <- beta_star
+parGridUnif$u1 <- u1
+sensResCmUnif <- apply(parGridUnif, 1, sens_cm)
+sensResMsmUnif <- apply(parGridUnif, 1, sens_msm)
+parGridUnif$bias_cm <- sensResCmUnif[1,]
+parGridUnif$beta_cm <- sensResCmUnif[2,]
+parGridUnif$bias_msm <- sensResMsmUnif[1,]
+parGridUnif$beta_msm <- sensResMsmUnif[2,]
+
+# summary statistics of sensitivity analysis
+mean(parGridUnif$bias_msm)
+median(parGridUnif$bias_msm)
+var(parGridUnif$bias_msm)
+quantile(parGridUnif$bias_msm)
+mean(parGridBeta$bias_msm)
+median(parGridBeta$bias_msm)
+var(parGridBeta$bias_msm)
+quantile(parGridBeta$bias_msm)
+
+# create plot 
+png(paste0(figures_dir, "/sensanalyse2.png"), width = 6, height = 4, 
+    units = 'in', res = 300)
 par(mar = c(4, 3, rep(1, 2)))
-plot(density(out$bias_msm), xaxt = "n", yaxt = "n", lwd = 1.5, frame.plot = F,
+plot(density(parGridUnif$bias_msm), xaxt = "n", yaxt = "n", lwd = 1.5, frame.plot = F,
      ann = F, zero.line = F,
-     xlim = c(-0.8, 0.2), ylim = c(0, 3))
-lines(density(out$bias_cm), lty = 2)
+     xlim = c(-2.5, 0.5), ylim = c(0, 4))
+lines(density(parGridUnif$bias_cm), lty = 2)
+lines(density(parGridBeta$bias_msm), lty = 1, col = "grey")
+lines(density(parGridBeta$bias_cm), lty = 2, col = "grey")
 abline(v = 0, lty = 3)
-axis(1, at = c(-0.8, -0.3, 0.0, 0.2))
-axis(2, labels = F, at = c(0, 3))
+axis(1, at = c(-2.5, 0.0, 0.5))
+axis(2, labels = F, at = c(0, 4))
 mtext("bias in average treatment effect", side = 1, line = 2.5)
 mtext("density", side = 2, line = 1.5)
 legend("topright", legend = c("cm", "msm"),
        seg.len = 1, col = "black", lty = c(2, 1), lwd = 1.5, bty = 'n')
+legend("topleft", legend = c("uniform", "beta"),
+       seg.len = 1, col = c("black", "grey"), lty = 1, lwd = 1.5, bty = 'n')
 dev.off()
