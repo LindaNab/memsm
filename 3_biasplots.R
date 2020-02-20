@@ -51,9 +51,18 @@ fig2A1_3$gamma <- -2
 fig2A1_4 <- fig2A1_2
 fig2A1_4$gamma <- -2
 
+fig2A2_1 <- fig2A1_1
+fig2A2_1$sens = 0.80
+fig2A2_2 <- fig2A1_2
+fig2A2_2$sens = 0.80
+fig2A2_3 <- fig2A1_3
+fig2A2_3$sens = 0.80
+fig2A2_4 <- fig2A1_4
+fig2A2_4$sens = 0.80
+
 png(paste0(figures_dir,"/fig2A1.png"), 
     width = 4, height = 4, units = 'in', res = 100)
-par(mar = c(3.5, rep(1, 2), 4))
+par(mar = c(3.5, 1, 1, 4))
 plot(fig2A1_1$spec, apply(fig2A1_1, 1, wrap_bias_msm), type = 'l', pch = 20, 
      col = "black", lty = 1, xaxt = "n", yaxt = "n", lwd = 1.5, 
      frame.plot = F, ann = F,
@@ -75,14 +84,51 @@ lines(fig2A1_4$spec, apply(fig2A1_4, 1, wrap_bias_cm),
 axis(1, at = c(0, 1))
 mtext('specificity', side = 1, line = 1.5)
 axis(4, at = c(-1.5, 0, 1.5))
-text(fig2A1_1$spec[5], apply(fig2A1_1, 1, wrap_bias_msm)[1] - 0.05, 
+mtext("bias in average treatment effect", side = 4, line = 2.5)
+text(fig2A1_1$spec[15], apply(fig2A1_1, 1, wrap_bias_msm)[1] - 0.11, 
      expression(paste(gamma, " = 2, ", pi[0], " = 0.1")), cex = 0.75)
-text(fig2A1_2$spec[5], apply(fig2A1_2, 1, wrap_bias_msm)[1] - 0.05, 
+text(fig2A1_2$spec[15], apply(fig2A1_2, 1, wrap_bias_msm)[1] - 0.1, 
      expression(paste(gamma, " = 2, ", pi[0], " = 0.5")), cex = 0.75)
-text(fig2A1_3$spec[5], apply(fig2A1_3, 1, wrap_bias_msm)[1] + 0.05, 
+text(fig2A1_3$spec[15], apply(fig2A1_3, 1, wrap_bias_msm)[1] + 0.1, 
      expression(paste(gamma, " = -2, ", pi[0], " = 0.1")), cex = 0.75)
-text(fig2A1_4$spec[5], apply(fig2A1_4, 1, wrap_bias_msm)[1] + 0.05, 
+text(fig2A1_4$spec[15], apply(fig2A1_4, 1, wrap_bias_msm)[1] + 0.11, 
      expression(paste(gamma, " = -2, ", pi[0], " = 0.5")), cex = 0.75)
+dev.off()
+
+png(paste0(figures_dir,"/fig2A2.png"), 
+    width = 4, height = 4, units = 'in', res = 100)
+par(mar = c(3.5, 4, 1, 1))
+plot(fig2A2_1$spec, apply(fig2A2_1, 1, wrap_bias_msm), type = 'l', pch = 20, 
+     col = "black", lty = 1, xaxt = "n", yaxt = "n", lwd = 1.5, 
+     frame.plot = F, ann = F,
+     xlim = c(0, 1), ylim = c(-1.5, 1.5))
+lines(fig2A2_1$spec, apply(fig2A2_1, 1, wrap_bias_cm), 
+      col = "grey", lwd = 1.5)
+lines(fig2A2_2$spec, apply(fig2A2_2, 1, wrap_bias_msm), 
+      col = "black", lty = 2,  lwd = 1.5)
+lines(fig2A2_2$spec, apply(fig2A2_2, 1, wrap_bias_cm), 
+      col = "grey", lty = 2, lwd = 1.5)
+lines(fig2A2_3$spec, apply(fig2A2_3, 1, wrap_bias_msm), 
+      col = "black", lty = 1,  lwd = 1.5)
+lines(fig2A2_3$spec, apply(fig2A2_3, 1, wrap_bias_cm), 
+      col = "grey", lty = 1, lwd = 1.5)
+lines(fig2A2_4$spec, apply(fig2A2_4, 1, wrap_bias_msm), 
+      col = "black", lty = 2,  lwd = 1.5)
+lines(fig2A2_4$spec, apply(fig2A2_4, 1, wrap_bias_cm), 
+      col = "grey", lty = 2, lwd = 1.5)
+axis(1, at = c(0, 1))
+mtext('specificity', side = 1, line = 1.5)
+axis(2, at = c(-1.5, 0, 1.5))
+mtext("bias in average treatment effect", side = 2, line = 2.5)
+text(fig2A2_1$spec[85], apply(fig2A2_1, 1, wrap_bias_cm)[100] - 0.1, 
+     expression(paste(gamma, " = 2, ", pi[0], " = 0.1")), cex = 0.75)
+text(fig2A2_2$spec[85], apply(fig2A2_2, 1, wrap_bias_msm)[100] - 0.1, 
+     expression(paste(gamma, " = 2, ", pi[0], " = 0.5")), cex = 0.75)
+text(fig2A2_3$spec[85], apply(fig2A2_3, 1, wrap_bias_cm)[100] + 0.1, 
+     expression(paste(gamma, " = -2, ", pi[0], " = 0.1")), cex = 0.75)
+text(fig2A2_4$spec[85], apply(fig2A2_4, 1, wrap_bias_msm)[100] + 0.1, 
+     expression(paste(gamma, " = -2, ", pi[0], " = 0.5")), cex = 0.75)
+dev.off()
 
 #Scenarios------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------
