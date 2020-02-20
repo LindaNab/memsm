@@ -1,70 +1,88 @@
-#---------------------------------------------------------------------------------------------------------
-#This code creates Figure 2a-2h in 'Sensitivity analysis for bias due to a misclassfied confounding variab
-#le in marginal structural models'------------------------------------------------------------------------
-#Author: Linda Nab, l.nab@lumc.nl-------------------------------------------------------------------------
-#Date: 05122019-------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# This code creates Figure 2 + 3 in 'Quantitative bias analysis for a misclassif
+# ied confounder: a comparison between marginal structural models and conditiona 
+# l models' --------------------------------------------------------------------
+# Author: Linda Nab, lindanab4@gmail.com ---------------------------------------
+# Date of creation: 20190512 ---------------------------------------------------
+# Date last change: 20200220 ---------------------------------------------------
+# ------------------------------------------------------------------------------
 
-#Bias expressions ----------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------
-#read for the derivations of these bias expressions the appendix of the original paper--------------------
-#---------------------------------------------------------------------------------------------------------
-figures_dir <- "./figures"
-#bias in conditional model
-bias_cm <- function(par){
-  alpha <- 1
-  beta <- par[1]; gamma <- par[2]; lambda <- par[3]
-  p_0 <- par[4]; p_1 <- par[5]; pi_0 <- par[6]; pi_1 <- par[7]
-  #omega = P(A)
-  omega <- pi_0 * (1-lambda) + pi_1 * lambda
-  #ell = P(L^*)
-  ell <- p_0 * (1-lambda) + p_1 * lambda
-  #pi_star = P(A|L_star=l_star)
-  pi_star <- function(l_star){
-    term0 <- pi_0 * ((1-p_0)^(1-l_star)*p_0^l_star*(1-lambda)) / ((1-ell)^(1-l_star)*ell^l_star)
-    term1 <- pi_1 * ((1-p_1)^(1-l_star)*p_1^l_star*lambda) / ((1-ell)^(1-l_star)*ell^l_star)
-    return(term0 + term1)
-  }
-  #phi = P(L|A=a,L_star=l_star)
-  phi <- function(a, l_star){
-    out <- (lambda*(1-pi_1)^(1-a)*pi_1^a*(1-p_1)^(1-l_star)*p_1^l_star) / 
-      ((1-pi_star(l_star))^(1-a)*pi_star(l_star)^a*(1-ell)^(1-l_star)*ell^l_star)
-    return(out)
-  }
-  #bias
-  temp <- (pi_star(1)*ell*(1-omega)-pi_star(1)*(pi_star(1) - pi_star(0))*ell*(1-ell)) / 
-  (omega*(1-omega)-(pi_star(1)-pi_star(0))^2*ell*(1-ell))
-  bias_cm <- gamma * (phi(1,0) - phi(0,0)) * (1 - temp) + 
-                gamma * (phi(1,1) - phi(0,1)) * temp
-  return(bias_cm)
+# ------------------------------------------------------------------------------
+# 0. Set directories source functions and load libraries
+# ------------------------------------------------------------------------------
+figures_dir <- "./figures" # directory where figures will be saved to
+source("./biasformulas.R")
+wrap_bias_msm <- function(df){
+  bias_msm(p_1 = df['sens'], 
+           p_0 = (1 - df['spec']),
+           pi_0 = df['pi_0'], 
+           pi_1 = df['pi_1'],
+           gamma = df['gamma'],
+           lambda = df['lambda'])
+}
+wrap_bias_cm <- function(df){
+  bias_cm(p_1 = df['sens'], 
+           p_0 = (1 - df['spec']),
+           pi_0 = df['pi_0'], 
+           pi_1 = df['pi_1'],
+           gamma = df['gamma'],
+           lambda = df['lambda'])
 }
 
-#bias in msm estimated using ipw
-bias_msm <- function(par){
-  alpha <- 1
-  beta <- par[1]; gamma <- par[2]; lambda <- par[3]
-  p_0 <- par[4]; p_1 <- par[5]; pi_0 <- par[6]; pi_1 <- par[7]
-  #omega = P(A)
-  omega <- pi_0 * (1-lambda) + pi_1 * lambda
-  #ell = P(L^*)
-  ell <- p_0 * (1-lambda) + p_1 * lambda
-  #pi_star = P(A|L_star=l_star)
-  pi_star <- function(l_star){
-    term0 <- pi_0 * ((1-p_0)^(1-l_star)*p_0^l_star*(1-lambda)) / ((1-ell)^(1-l_star)*ell^l_star)
-    term1 <- pi_1 * ((1-p_1)^(1-l_star)*p_1^l_star*lambda) / ((1-ell)^(1-l_star)*ell^l_star)
-    return(term0 + term1)
-  }
-  #phi = P(L|A=a,L_star=l_star)
-  phi <- function(a, l_star){
-    out <- (lambda*(1-pi_1)^(1-a)*pi_1^a*(1-p_1)^(1-l_star)*p_1^l_star) / 
-      ((1-pi_star(l_star))^(1-a)*pi_star(l_star)^a*(1-ell)^(1-l_star)*ell^l_star)
-    return(out)
-  }
-  #bias
-  bias_msm <- gamma * (phi(1,0) - phi(0,0)) * (1 - ell) + 
-                   gamma * (phi(1,1) - phi(0,1)) * ell
-  return(bias_msm)
-}
+# ------------------------------------------------------------------------------
+# 1. Set parameters
+# ------------------------------------------------------------------------------
+# Figure 2 consist of 4 plots. The x axis of the plot varies the spec from 0 to 
+# 1, and the y axis represents bias in the ATE. In the first two plots, pi_1 > 
+# pi_0 (scen A, pi_1 = 0.75). In the last two plots, pi_1 < pi_0 (scen B, pi_1 = 
+# 0.5). In plot A1 + B1, sens = 0.95, in plot A2 + B2, sens = 0.80. Plot A1-B2 
+# consist of four lines: 1) gamma = 2, pi_0 = 0.25; 2) gamma = 2, pi_0 = 0.5; 3) 
+# gamma = -2, pi_0 = 0.25; 4) gamma = -2, pi_0 = 0.5.
+fig2A1_1 <- data.frame(spec = seq(from = 0, to = 1, length.out = 100),
+                       sens = 0.95, 
+                       pi_0 = 0.1, 
+                       pi_1 = 0.75,
+                       gamma = 2,
+                       lambda = 0.5)
+fig2A1_2 <- fig2A1_1
+fig2A1_2$pi_0 <- 0.5
+fig2A1_3 <- fig2A1_1
+fig2A1_3$gamma <- -2
+fig2A1_4 <- fig2A1_2
+fig2A1_4$gamma <- -2
+
+png(paste0(figures_dir,"/fig2A1.png"), 
+    width = 4, height = 4, units = 'in', res = 100)
+par(mar = c(3.5, rep(1, 2), 4))
+plot(fig2A1_1$spec, apply(fig2A1_1, 1, wrap_bias_msm), type = 'l', pch = 20, 
+     col = "black", lty = 1, xaxt = "n", yaxt = "n", lwd = 1.5, 
+     frame.plot = F, ann = F,
+     xlim = c(0, 1), ylim = c(-1.5, 1.5))
+lines(fig2A1_1$spec, apply(fig2A1_1, 1, wrap_bias_cm), 
+      col = "grey", lwd = 1.5)
+lines(fig2A1_2$spec, apply(fig2A1_2, 1, wrap_bias_msm), 
+      col = "black", lty = 2,  lwd = 1.5)
+lines(fig2A1_2$spec, apply(fig2A1_2, 1, wrap_bias_cm), 
+      col = "grey", lty = 2, lwd = 1.5)
+lines(fig2A1_3$spec, apply(fig2A1_3, 1, wrap_bias_msm), 
+      col = "black", lty = 1,  lwd = 1.5)
+lines(fig2A1_3$spec, apply(fig2A1_3, 1, wrap_bias_cm), 
+      col = "grey", lty = 1, lwd = 1.5)
+lines(fig2A1_4$spec, apply(fig2A1_4, 1, wrap_bias_msm), 
+      col = "black", lty = 2,  lwd = 1.5)
+lines(fig2A1_4$spec, apply(fig2A1_4, 1, wrap_bias_cm), 
+      col = "grey", lty = 2, lwd = 1.5)
+axis(1, at = c(0, 1))
+mtext('specificity', side = 1, line = 1.5)
+axis(4, at = c(-1.5, 0, 1.5))
+text(fig2A1_1$spec[5], apply(fig2A1_1, 1, wrap_bias_msm)[1] - 0.05, 
+     expression(paste(gamma, " = 2, ", pi[0], " = 0.1")), cex = 0.75)
+text(fig2A1_2$spec[5], apply(fig2A1_2, 1, wrap_bias_msm)[1] - 0.05, 
+     expression(paste(gamma, " = 2, ", pi[0], " = 0.5")), cex = 0.75)
+text(fig2A1_3$spec[5], apply(fig2A1_3, 1, wrap_bias_msm)[1] + 0.05, 
+     expression(paste(gamma, " = -2, ", pi[0], " = 0.1")), cex = 0.75)
+text(fig2A1_4$spec[5], apply(fig2A1_4, 1, wrap_bias_msm)[1] + 0.05, 
+     expression(paste(gamma, " = -2, ", pi[0], " = 0.5")), cex = 0.75)
 
 #Scenarios------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------
