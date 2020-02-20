@@ -9,7 +9,7 @@
 #---------------------------------------------------------------------------------------------------------
 #read for the derivations of these bias expressions the appendix of the original paper--------------------
 #---------------------------------------------------------------------------------------------------------
-figures_dir <- paste0(getwd(), "/figures")
+figures_dir <- "./figures"
 #bias in conditional model
 bias_cm <- function(par){
   alpha <- 1

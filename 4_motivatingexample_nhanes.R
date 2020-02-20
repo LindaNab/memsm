@@ -212,6 +212,7 @@ ell_data <- mean(DataS_s_c$bmi_self_c) #P(L*=1) = 0.77 (l)
 pi_star_1_data <- mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 1]) #P(A=1|L*=1) = 0.44 (pi_star_1)
 pi_star_0_data <- mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 0]) #P(A=1|L*=0) = 0.32 (pi_star_0)
 omega_data <- mean(DataS_s_c$bpdrug) #P(A)=0.41
+gamma_star <- lm(sbpm ~ bpdrug * bmi_self_c, data = DataS_s_c)$coef[3]
 # you'll assume:
 # We know what p_1, p_0 and lambda = P(L=1) is in our data
 # mean(DataS_s_c$bmi_self_c[DataS_s_c$bmi_c == 0]) #p_0=0.08
@@ -220,167 +221,153 @@ omega_data <- mean(DataS_s_c$bpdrug) #P(A)=0.41
 # P(L) is,
 p_0 <- 0.08
 p_1 <- 0.94
+# load sensformulas
+source("./sensformulas.R")
 #from this, we can calculate lambda and pi_0 and pi_1:
-calc_lambda <- function(ell, p_0, p_1){
-  (ell - p_0) / (p_1 - p_0)
-} 
 calc_lambda(ell_data, p_0, p_1) 
 # mean(DataS_s_c$bpdrug[DataS_s_c$bmi_c == 1]) #the 'real' pi_1=0.44
 # mean(DataS_s_c$bpdrug[DataS_s_c$bmi_c == 0]) #the 'real' pi_0=0.32
-#calc pi_1
-calc_pi_1 <- function(pi_star_0, pi_star_1, ell, p_0, p_1){
-  term1 <- (pi_star_1 * ell - pi_star_0 * (1 - ell) * (p_0 / (1 - p_0))) /
-    (p_1 * calc_lambda(ell, p_0, p_1))
-  term2 <- ((1 - p_0) * p_1) / ((1 - p_0) * p_1 - (1 - p_1) * p_0)
-  return(term1 * term2)
-}
+# calc pi_1
 calc_pi_1(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1) #0.45
 #calc pi_0
-calc_pi_0 <- function(pi_star_0, pi_star_1, ell, p_0, p_1){
-  (pi_star_0 * (1 - ell) - calc_pi_1(pi_star_0, pi_star_1, ell, p_0, p_1) * 
-     (1 - p_1) * calc_lambda(ell, p_0, p_1)) / 
-    ((1 - p_0) * (1 - calc_lambda(ell, p_0, p_1)))
-}
 calc_pi_0(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1) #0.28
 #calc phi
 # mean(DataS_s_c$bmi_c[DataS_s_c$bpdrug == 0 & DataS_s_c$bmi_self_c == 0]) #0.20
 # mean(DataS_s_c$bmi_c[DataS_s_c$bpdrug == 1 & DataS_s_c$bmi_self_c == 0]) #0.17
 # mean(DataS_s_c$bmi_c[DataS_s_c$bpdrug == 0 & DataS_s_c$bmi_self_c == 1]) #0.97
 # mean(DataS_s_c$bmi_c[DataS_s_c$bpdrug == 1 & DataS_s_c$bmi_self_c == 1]) #0.99
-phi <- function(pi_star_0, pi_star_1, ell, p_0, p_1, a, l_star){
-  pi_0 <- calc_pi_0(pi_star_0, pi_star_1, ell, p_0, p_1)
-  pi_1 <- calc_pi_1(pi_star_0, pi_star_1, ell, p_0, p_1)
-  lambda <- calc_lambda(ell, p_0, p_1)
-  #select correct pi_star
-  pi_star <- function(pi_star_0, pi_star_1, l_star){
-    if(l_star == 0) out <- pi_star_0
-    else out <- pi_star_1
-    return(out)}
-  out <- (lambda*(1-pi_1)^(1-a)*pi_1^a*(1-p_1)^(1-l_star)*p_1^l_star) / 
-    ((1-pi_star(pi_star_0, pi_star_1, l_star))^(1-a) * 
-       pi_star(pi_star_0, pi_star_1, l_star)^a*(1-ell)^(1-l_star)*ell^l_star)
-  return(out)
-}
 phi(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, 0, 0) #0.17
 phi(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, 1, 0) #0.30
 phi(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, 0, 1) #0.97
 phi(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, 1, 1) #0.99
 #calc gamma
-fit_cm_int <- lm(sbpm ~ bpdrug * bmi_self_c, data = DataS_s_c)
-gamma <- fit_cm_int$coef[3]/(phi(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, 0, 1) - 
-                               phi(pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1, 0, 0))
-beta_star <- fit_msm_me$coef[2]
-DataS_s_c$q <- with(DataS_s_c, bpdrug * bmi_self_c)
-beta_star_cm <- fit_adj_me$coef[2]
-u1 <- lm(q ~ bpdrug + bmi_self_c, data = DataS_s_c)$coef[2]
+calc_gamma(gamma_star, pi_star_0_data, pi_star_1_data, ell_data, p_0, p_1)
 
 # sensitivity analysis msm 
-sens_msm <- function(df){
-  pi_star_0 <- df["pi_star_0"]
-  pi_star_1 <- df["pi_star_1"]
-  ell <- df["ell"]
-  p_0 <- df["p_0"]
-  p_1 <- df["p_1"]
-  gamma <- df["gamma"]
-  beta_star <- df["beta_star"]
-  bias_msm <- gamma * (1 - ell) * 
-    (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 0) - 
-       phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 0)) +
-    gamma * ell * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 1) - 
-                     phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 1))
-  beta_msm <- beta_star - bias_msm
-  return(c(bias = unname(bias_msm), beta = unname(beta_msm)))}
+beta_star <- fit_msm_me$coefficients[2]
 df <- data.frame("pi_star_0" = pi_star_0_data, 
-                      "pi_star_1" = pi_star_1_data, 
-                      "ell" = ell_data, 
-                      "p_0" = p_0, 
-                      "p_1" = p_1, 
-                      "gamma" = gamma, 
-                      "beta_star" = beta_star)
-sens_msm(df)
+                 "pi_star_1" = pi_star_1_data, 
+                  "ell" = ell_data, 
+                  "p_0" = p_0, 
+                  "p_1" = p_1, 
+                  "gamma_star" = gamma_star, 
+                  "beta_star" = beta_star)
+sensanalyse(df)
 
-# sensitivity analysis conditional model
-sens_cm <- function(df){
-  pi_star_0 <- df["pi_star_0"]
-  pi_star_1 <- df["pi_star_1"]
-  ell <- df["ell"]
-  p_0 <- df["p_0"]
-  p_1 <- df["p_1"]
-  gamma <- df["gamma"]
-  beta_star <- df["beta_star"]
-  u1 <- df["u1"]
-  bias_cm <- gamma * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 0) - 
-                        phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 0)) * 
-    (1 - u1) + gamma * (phi(pi_star_0, pi_star_1, ell, p_0, p_1, 1, 1) - 
-                          phi(pi_star_0, pi_star_1, ell, p_0, p_1, 0, 1)) * u1
-  beta_cm <- beta_star_cm - bias_cm
-  return(c(bias = unname(bias_cm), beta = unname(beta_cm)))}
-df$u1 <- u1
-sens_cm(df)
 
-# sample p_0 and p_1 from a beta distribution
-p_0_sample <- 1 - rbeta(n = 50, 15, 2)
-p_1_sample <- rbeta(n = 50, 15, 2)
-parGridBeta <- expand.grid("p_0" = p_0_sample, "p_1" = p_1_sample)
-parGridBeta$pi_star_0 <- pi_star_0_data
-parGridBeta$pi_star_1 <- pi_star_1_data
-parGridBeta$ell <- ell_data
-parGridBeta$gamma <- gamma
-parGridBeta$beta_star <- beta_star
-parGridBeta$u1 <- u1
-sensResCmBeta <- apply(parGridBeta, 1, sens_cm)
-sensResMsmBeta <- apply(parGridBeta, 1, sens_msm)
-parGridBeta$bias_cm <- sensResCmBeta[1,]
-parGridBeta$beta_cm <- sensResCmBeta[2,]
-parGridBeta$bias_msm <- sensResMsmBeta[1,]
-parGridBeta$beta_msm <- sensResMsmBeta[2,]
-
+min_p0 <- 0.02
+max_p0 <- 0.10
+min_p1 <- 0.90
+max_p1 <- 0.98
 # sample p_0 and p_1 from a uniform distribution
-p_0_sample <- seq(from = 0.02, to = 0.10, length.out = 50)
-p_1_sample <- seq(from = 0.90, to = 0.98, length.out = 50)
-#p_0_sample <- runif(n = 50, min = 0.02, max = 0.10)
-#p_1_sample <- runif(n = 50, min = 0.90, max = 0.98)
-parGridUnif <- expand.grid("p_0" = p_0_sample, "p_1" = p_1_sample)
+p0_sample <- seq(from = min_p0, to = max_p0, length.out = 20)
+p1_sample <- seq(from = min_p1, to = max_p1, length.out = 20)
+parGridUnif <- expand.grid("p_0" = p0_sample, "p_1" = p1_sample)
 parGridUnif$pi_star_0 <- pi_star_0_data
 parGridUnif$pi_star_1 <- pi_star_1_data
 parGridUnif$ell <- ell_data
-parGridUnif$gamma <- gamma
-parGridUnif$beta_star <- beta_star
-parGridUnif$u1 <- u1
-sensResCmUnif <- apply(parGridUnif, 1, sens_cm)
-sensResMsmUnif <- apply(parGridUnif, 1, sens_msm)
-parGridUnif$bias_cm <- sensResCmUnif[1,]
-parGridUnif$beta_cm <- sensResCmUnif[2,]
-parGridUnif$bias_msm <- sensResMsmUnif[1,]
-parGridUnif$beta_msm <- sensResMsmUnif[2,]
+parGridUnif$gamma_star <- gamma_star
+sensResUnif <- apply(parGridUnif, 1, sensanalyse)
+parGridUnif$bias_cm <- sensResUnif["biasCm",]
+parGridUnif$bias_msm <- sensResUnif["biasMsm",]
 
 # summary statistics of sensitivity analysis
 mean(parGridUnif$bias_msm)
 median(parGridUnif$bias_msm)
 var(parGridUnif$bias_msm)
 quantile(parGridUnif$bias_msm)
-mean(parGridBeta$bias_msm)
-median(parGridBeta$bias_msm)
-var(parGridBeta$bias_msm)
-quantile(parGridBeta$bias_msm)
+mean(parGridUnif$bias_cm)
+median(parGridUnif$bias_cm)
+var(parGridUnif$bias_cm)
+quantile(parGridUnif$bias_cm)
+
+# sample p_0 and p_1 from a trapezoidal distribution
+mod_lowp0 <- ( min_p0 + ( (max_p0 - min_p0) * 1 / 3 ) ) * 100
+mod_upp0 <- ( min_p0 + ( (max_p0 - min_p0) * 2 / 3 ) ) * 100
+mod_lowp1 <- ( min_p1 + ( (max_p1 - min_p1) * 1 / 3 ) ) * 100
+mod_upp1 <- ( min_p1 + ( (max_p1 - min_p1) * 2 / 3 ) ) * 100
+u <- seq(from = 0, to = 1, length.out = 50)
+
+trap <- function(u, min, mod_low, mod_up, max){
+  s <- (min + mod_low + u * (max + mod_up - min - mod_low)) / 
+    2
+  if (s > mod_up){
+    trap <- max - sqrt(2 * (max - mod_up) * (s - mod_up))
+  } else if (s < mod_low){
+    trap <- min + sqrt((mod_low - min) * (2 * s - min - mod_low))
+  }
+  else trap <- s
+  return(trap)
+}
+
+trap0 <- sapply(u, trap, min_p0*100, mod_lowp0, mod_upp0, max_p0*100)
+plot(density(trap0))
+hist(trap0)
+trap1 <- sapply(u, trap, min_p1*100, mod_lowp1, mod_upp1, max_p1*100)
+plot(density(trap1))
+hist(trap1)
+
+parGridTrap <- expand.grid("p_0" = trap0/100, "p_1" = trap1/100)
+parGridTrap$pi_star_0 <- pi_star_0_data
+parGridTrap$pi_star_1 <- pi_star_1_data
+parGridTrap$ell <- ell_data
+parGridTrap$gamma_star <- gamma_star
+sensResTrap <- apply(parGridTrap, 1, sensanalyse)
+parGridTrap$bias_cm <- sensResTrap["biasCm",]
+parGridTrap$bias_msm <- sensResTrap["biasMsm",]
+
+# summary statistics of sensitivity analysis
+mean(parGridTrap$bias_msm)
+median(parGridTrap$bias_msm)
+mean(parGridTrap$bias_cm)
+
+# sample p_0 and p_1 from triangular distribution
+mod_lowp0 <- ( min_p0 + ( (max_p0 - min_p0) * 1 / 2 ) ) * 100
+mod_upp0 <- mod_lowp0
+mod_lowp1 <- ( min_p1 + ( (max_p1 - min_p1) * 1 / 2 ) ) * 100
+mod_upp1 <- mod_lowp1
+u <- seq(from = 0, to = 1, length.out = 50)
+
+trian0 <- sapply(u, trap, min_p0*100, mod_lowp0, mod_upp0, max_p0*100)
+plot(density(trian0))
+hist(trap0)
+trian1 <- sapply(u, trap, min_p1*100, mod_lowp1, mod_upp1, max_p1*100)
+plot(density(trian1))
+hist(trap1)
+
+parGridTrian <- expand.grid("p_0" = trian0/100, "p_1" = trian1/100)
+parGridTrian$pi_star_0 <- pi_star_0_data
+parGridTrian$pi_star_1 <- pi_star_1_data
+parGridTrian$ell <- ell_data
+parGridTrian$gamma_star <- gamma_star
+sensResTrian <- apply(parGridTrian, 1, sensanalyse)
+parGridTrian$bias_cm <- sensResTrian["biasCm",]
+parGridTrian$bias_msm <- sensResTrian["biasMsm",]
+
+# summary statistics of sensitivity analysis
+mean(parGridTrian$bias_msm)
+mean(parGridTrian$bias_cm)
 
 # create plot 
-png(paste0(figures_dir, "/sensanalyse2.png"), width = 6, height = 4, 
+png(paste0(figures_dir, "/sensanalyse.png"), width = 6, height = 4, 
     units = 'in', res = 300)
 par(mar = c(4, 3, rep(1, 2)))
-plot(density(parGridUnif$bias_msm), xaxt = "n", yaxt = "n", lwd = 1.5, frame.plot = F,
-     ann = F, zero.line = F,
-     xlim = c(-2.5, 0.5), ylim = c(0, 4))
-lines(density(parGridUnif$bias_cm), lty = 2)
-lines(density(parGridBeta$bias_msm), lty = 1, col = "grey")
-lines(density(parGridBeta$bias_cm), lty = 2, col = "grey")
-abline(v = 0, lty = 3)
-axis(1, at = c(-2.5, 0.0, 0.5))
-axis(2, labels = F, at = c(0, 4))
+plot(density(parGridUnif$bias_msm), xaxt = "n", yaxt = "n", lwd = 1.5, 
+     frame.plot = F, ann = F, zero.line = F,
+     xlim = c(-0.8, 0.2), ylim = c(0, 6), lty = 1)
+lines(density(parGridUnif$bias_cm), lty = 1, col = "grey")
+lines(density(parGridTrap$bias_msm), lty = 2, col = "black")
+lines(density(parGridTrap$bias_cm), lty = 2, col = "grey")
+lines(density(parGridTrian$bias_msm), lty = 3, col = "black")
+lines(density(parGridTrian$bias_cm), lty = 3, col = "grey")
+abline(v = 0, lty = 4)
+axis(1, at = c(-0.8, 0.0, 0.2))
+axis(2, labels = F, at = c(0, 6))
 mtext("bias in average treatment effect", side = 1, line = 2.5)
 mtext("density", side = 2, line = 1.5)
-legend("topright", legend = c("cm", "msm"),
-       seg.len = 1, col = "black", lty = c(2, 1), lwd = 1.5, bty = 'n')
-legend("topleft", legend = c("uniform", "beta"),
-       seg.len = 1, col = c("black", "grey"), lty = 1, lwd = 1.5, bty = 'n')
+legend("topright", legend = c("msm", "cm"),
+       seg.len = 1, col = c("black", "grey"), lty = c(1, 1), lwd = 1.5, bty = 'n')
+legend("topleft", legend = c("uniform", "trapezodial", "triangular"),
+       seg.len = 1, col = c("black", "black", "black"), lty = c(1, 2, 3), 
+       lwd = 1.5, bty = 'n')
 dev.off()
