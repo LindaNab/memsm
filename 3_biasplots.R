@@ -13,7 +13,7 @@
 figures_dir <- "./figures" # directory where figures will be saved to
 source("./biasformulas.R")
 wrap_bias_msm <- function(df){
-  bias_msm(p_1 = df['sens'], 
+  calc_bias_msm(p_1 = df['sens'], 
            p_0 = (1 - df['spec']),
            pi_0 = df['pi_0'], 
            pi_1 = df['pi_1'],
@@ -21,7 +21,7 @@ wrap_bias_msm <- function(df){
            lambda = df['lambda'])
 }
 wrap_bias_cm <- function(df){
-  bias_cm(p_1 = df['sens'], 
+  calc_bias_cm(p_1 = df['sens'], 
            p_0 = (1 - df['spec']),
            pi_0 = df['pi_0'], 
            pi_1 = df['pi_1'],
@@ -32,233 +32,121 @@ wrap_bias_cm <- function(df){
 # ------------------------------------------------------------------------------
 # 1. Set parameters for the figures
 # ------------------------------------------------------------------------------
-# Figure 2A consist of 2 plots. The x axis of the plot varies pi_1 from 0 to 
-# 1, and the y axis represents bias in the ATE. 2A1) gamma = 2, pi_0 = 0.8; 
-# 2A2) gamma = -2, pi_0 = 0.5
-fig2A1 <- data.frame(spec = 0.95,
-                     sens = 0.9, 
-                     pi_0 = 0.8, 
-                     pi_1 = seq(from = 0, to = 1, length.out = 100),
-                     gamma = 2,
-                     lambda = 0.5)
-fig2A2 <- fig2A1
-fig2A2$pi_0 <- 0.5
-fig2A2$gamma <- -2
-
-# Figure 2B consist of 1 plot with 2 lines. The x axis of the plot varies gamma 
-# from -5 to 5, and the y axis represents bias in the ATE. 2B1) pi_1 = 0.9 
-# pi_0 = 0.5; 2B2) pi_1 = 0.5, pi_0 = 0.9
-fig2B1 <- data.frame(spec = 0.95,
-                     sens = 0.9, 
-                     pi_0 = 0.45, 
-                     pi_1 = 0.9,
-                     gamma = seq(from = -5, to = 5, length.out = 100),
-                     lambda = 0.5)
-fig2B2 <- fig2B1
-fig2B2$pi_0 = 0.9
-fig2B2$pi_1 = 0.5
+# Figure 2 consist of 2 plots. The x axis of the plot varies pi_1 from 0 to 
+# 1, and the y axis represents bias in the ATE. 2a) gamma = 2, pi_0 = 0.5; 
+# 2b) gamma = 2, pi_0 = 0.8
+fig2a <- data.frame(spec = 0.95,
+                    sens = 0.9, 
+                    pi_0 = 0.5, 
+                    pi_1 = seq(from = 0, to = 1, length.out = 100),
+                    gamma = 2,
+                    lambda = 0.5)
+fig2b <- fig2a
+fig2b$pi_0 <- 0.8
 
 # Figure 3 consist of 1 plot with 2 lines. The x axis of the plot varies lambda 
 # from 0 to 1, and the y axis represents bias in the ATE. 3) pi_0 = 0.5 
 # pi_1 = 0.75; 2B2) pi_0 = 0.25, pi_1 = 0.75
-fig31 <- data.frame(spec = 0.95,
+fig3_1 <- data.frame(spec = 0.95,
+                    sens = 0.9, 
+                    pi_0 = 0.5, 
+                    pi_1 = 0.75,
+                    gamma = 2,
+                    lambda = seq(from = 0, to = 1, length.out = 100))
+fig3_2 <- fig3_1
+fig3_2$pi_0 <- 0.25
+
+fig4 <- data.frame(spec = seq(from = 0, to = 1, length.out = 100),
                    sens = 0.9, 
                    pi_0 = 0.5, 
                    pi_1 = 0.75,
-                   gamma = 5,
+                   gamma = 2,
                    lambda = seq(from = 0, to = 1, length.out = 100))
-fig32 <- fig31
-fig32$pi_0 = 0.25
 
-
-png(paste0(figures_dir,"/fig2A1.png"), 
+png(paste0(figures_dir,"/fig2a.png"), 
     width = 4, height = 4, units = 'in', res = 100)
-par(mgp = c(0, 0.25, 0), mar = c(4, 4, 4, 4))
+par(mgp = c(0, 0.25, 0), mar = c(3.5, 1, 1, 4))
 plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
      xlim = c(0, 1), ylim = c(-1.5, 1.5))
-rect(xleft = c(0, 0), ybottom = c(-1.5, -1.5), 
-     xright = c(1, 1), ytop = c(0, 0),
-     col = "lightgrey", border = NA)
-rect(xleft = c(0, 0), ybottom = c(-1.5, -1.5), 
-     xright = c(0.8, 0.8), ytop = c(1.5, 1.5),
-     density = 10, col = "grey", border = NA)
-lines(c(0.8, 0.8), c(-1.5, 1.5), col = "grey")
-lines(fig2A1$pi_1, apply(fig2A1, 1, wrap_bias_msm), 
-      col = "black", lty = 1, lwd = 1.5)
-lines(fig2A1$pi_1, apply(fig2A1, 1, wrap_bias_cm), 
-      col = "black", lty = 2, lwd = 1.5)
-axis(1, at = c(0, 0.8, 1), 
-     label = c(0, expression(paste(pi[0], " = 0.8")), 1), 
-     tck = -0.01, cex.axis = 0.75)
-text(0.8, -1.75, expression(paste(pi[0], " = 0.8")))
-mtext(expression(pi[1]), side = 1, line = 1.5, cex = 1.25)
-axis(4, at = c(-1.5, 0, 1.5), tck = -0.01, cex.axis = 0.75)
-mtext("bias in average treatment effect", side = 4, line = 1.5)
-mtext("Confounder and outcome positively associated", side = 3, line = 2)
-#text(0.8, 1.55, expression(paste(pi[1], " = ", pi[0])))
-legend(-0.2, 2.15, xpd = T, 
-       legend = c("Bias < 0", "confounder and exposure neg ass"),
-                  #expression(paste(pi[1], " < ", pi[0]))), 
-       fill = c("lightgrey", "grey"),
-       border = c("lightgrey", "grey"),
-       density = c(NA, 20),
-       horiz = T,
-       bty = "n",
-       cex = 0.75,
-       x.intersp = 0.25,
-       text.width=c(0,0.25))
-legend(0, 2, xpd = T, 
-       legend = c("MSM-IPW", "conditional model"),
-       lty = c(1, 2),
-       bty = "n",
-       horiz = T,
-       cex = 0.75,
-       x.intersp = 0.25,
-       seg.len = 1.5,
-       text.width = c(0, 0.3))
-dev.off()
-
-png(paste0(figures_dir,"/fig2A2.png"), 
-    width = 4, height = 4, units = 'in', res = 100)
-par(mgp = c(0, 0.25, 0), mar = c(4, 4, 4, 4))
-plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
-     xlim = c(0, 1), ylim = c(-1.5, 1.5))
-rect(xleft = c(0, 0), ybottom = c(-1.5, -1.5), 
-     xright = c(1, 1), ytop = c(0, 0),
-     col = "lightgrey", border = NA)
-rect(xleft = c(0, 0), ybottom = c(-1.5, -1.5), 
-     xright = c(0.5, 0.5), ytop = c(1.5, 1.5),
-     density = 10, col = "grey", border = NA)
+lines(c(0, 1), c(0, 0), col = "grey")
 lines(c(0.5, 0.5), c(-1.5, 1.5), col = "grey")
-lines(fig2A2$pi_1, apply(fig2A2, 1, wrap_bias_msm), 
+lines(fig2a$pi_1, apply(fig2a, 1, wrap_bias_msm), 
       col = "black", lty = 1, lwd = 1.5)
-lines(fig2A2$pi_1, apply(fig2A2, 1, wrap_bias_cm), 
+lines(fig2a$pi_1, apply(fig2a, 1, wrap_bias_cm), 
       col = "black", lty = 2, lwd = 1.5)
 axis(1, at = c(0, 0.5, 1), 
      label = c(0, expression(paste(pi[0], " = 0.5")), 1), 
      tck = -0.01, cex.axis = 0.75)
 mtext(expression(pi[1]), side = 1, line = 1.5, cex = 1.25)
-axis(2, at = c(-1.5, 0, 1.5), tck = -0.01, cex.axis = 0.75)
-mtext("bias in average treatment effect", side = 2, line = 1.5)
-mtext("Confounder and outcome negatively associated", side = 3, line = 2)
-#text(0.8, 1.55, expression(paste(pi[1], " = ", pi[0])))
-legend(-0.2, 2.15, xpd = T, 
-       legend = c("Bias < 0", "confounder and exposure neg ass"),
-       #expression(paste(pi[1], " < ", pi[0]))), 
-       fill = c("lightgrey", "grey"),
-       border = c("lightgrey", "grey"),
-       density = c(NA, 20),
-       horiz = T,
-       bty = "n",
-       cex = 0.75,
-       x.intersp = 0.25,
-       text.width=c(0,0.25))
-legend(0, 2, xpd = T, 
-       legend = c("MSM-IPW", "conditional model"),
-       lty = c(1, 2),
-       bty = "n",
-       horiz = T,
-       cex = 0.75,
-       x.intersp = 0.25,
-       seg.len = 1.5,
-       text.width = c(0, 0.3))
-dev.off()
-
-png(paste0(figures_dir,"/fig2B.png"), 
-    width = 4, height = 4, units = 'in', res = 100)
-par(mgp = c(0, 0.25, 0), mar = c(4, 4, 4, 4))
-plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
-     xlim = c(-5, 5), ylim = c(-1.5, 1.5))
-rect(xleft = c(-5, -5), ybottom = c(-1.5, -1.5), 
-     xright = c(5, 5), ytop = c(0, 0),
-     col = "lightgrey", border = NA)
-lines(fig2B1$gamma, apply(fig2B1, 1, wrap_bias_msm), 
-      col = "black", lty = 1, lwd = 1.5)
-lines(fig2B1$gamma, apply(fig2B1, 1, wrap_bias_cm), 
-      col = "black", lty = 2, lwd = 1.5)
-lines(fig2B2$gamma, apply(fig2B2, 1, wrap_bias_msm), 
-      col = "grey", lty = 1, lwd = 1.5)
-lines(fig2B2$gamma, apply(fig2B2, 1, wrap_bias_cm), 
-      col = "grey", lty = 2, lwd = 1.5)
-axis(1, at = c(-5, 0, 5), 
-     label = c("", 0, ""), 
-     tck = -0.01, cex.axis = 0.75)
-axis(1, lwd = 0, lwd.tick = 0, at = c(-2.5, 2.5), 
-     label = c("negative", "positive"), cex.axis = 0.75)
-mtext("Association between confounder and outcome", 
-      side = 1, line = 1.5)
 axis(4, at = c(-1.5, 0, 1.5), tck = -0.01, cex.axis = 0.75)
 mtext("bias in average treatment effect", side = 4, line = 1.5)
-legend(-8, 2.5, xpd = T, 
-       legend = c("Confounder and exposure neg ass", 
-                  "Confounder and exposure pos ass"),
-       lty = c(1, 1),
-       col = c("grey", "black"),
-       bty = "n",
-       horiz = F,
-       cex = 1,
-       x.intersp = 0.25,
-       seg.len = 1.5,
-       text.width = c(0, 0.3))
-legend(-2, 2, xpd = T, 
-       legend = c("Bias < 0"),
-       fill = c("lightgrey"),
-       border = c("lightgrey"),
-       horiz = T,
-       bty = "n",
-       cex = 0.75,
-       x.intersp = 0.25)
-legend(-5.5, 1.85, xpd = T, 
+legend("topleft", 
        legend = c("MSM-IPW", "conditional model"),
        lty = c(1, 2),
        bty = "n",
-       horiz = T,
+       horiz = F,
+       cex = 0.75,
+       x.intersp = 0.25,
+       seg.len = 1.5)
+dev.off()
+
+png(paste0(figures_dir,"/fig2b.png"), 
+    width = 4, height = 4, units = 'in', res = 100)
+par(mgp = c(0, 0.25, 0), mar = c(3.5, 4, 1, 1))
+plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
+     xlim = c(0, 1), ylim = c(-1.5, 1.5))
+lines(c(0, 1), c(0, 0), col = "grey")
+lines(c(0.8, 0.8), c(-1.5, 1.5), col = "grey")
+lines(fig2b$pi_1, apply(fig2b, 1, wrap_bias_msm), 
+      col = "black", lty = 1, lwd = 1.5)
+lines(fig2b$pi_1, apply(fig2b, 1, wrap_bias_cm), 
+      col = "black", lty = 2, lwd = 1.5)
+axis(1, at = c(0, 0.8, 1), 
+     label = c(0, expression(paste(pi[0], " = 0.8")), 1), 
+     tck = -0.01, cex.axis = 0.75)
+mtext(expression(pi[1]), side = 1, line = 1.5, cex = 1.25)
+axis(2, at = c(-1.5, 0, 1.5), tck = -0.01, cex.axis = 0.75)
+mtext("bias in average treatment effect", side = 2, line = 1.5)
+legend("topleft", 
+       legend = c("MSM-IPW", "conditional model"),
+       lty = c(1, 2),
+       bty = "n",
+       horiz = F,
        cex = 0.75,
        x.intersp = 0.25,
        seg.len = 1.5,
-       text.width = c(0, 2.5))
+       text.width = c(0, 0.3))
 dev.off()
 
 png(paste0(figures_dir,"/fig3.png"), 
     width = 4, height = 4, units = 'in', res = 100)
-par(mgp = c(0, 0.25, 0), mar = c(4, 4, 4, 4))
+par(mgp = c(0, 0.25, 0), mar = c(3.5, 1, 1, 4))
 plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
-     xlim = c(0, 1), ylim = c(-1.5, 1.5))
-rect(xleft = c(0, 0), ybottom = c(-1.5, -1.5), 
-     xright = c(1, 1), ytop = c(0, 0),
-     col = "lightgrey", border = NA)
-lines(fig31$lambda, apply(fig31, 1, wrap_bias_msm), 
+     xlim = c(0, 1), ylim = c(0, 0.5))
+lines(fig3_1$lambda, apply(fig3_1, 1, wrap_bias_msm), 
       col = "black", lty = 1, lwd = 1.5)
-lines(fig31$lambda, apply(fig31, 1, wrap_bias_cm), 
+lines(fig3_1$lambda, apply(fig3_1, 1, wrap_bias_cm), 
       col = "black", lty = 2, lwd = 1.5)
-lines(fig32$lambda, apply(fig32, 1, wrap_bias_msm), 
+lines(fig3_2$lambda, apply(fig3_2, 1, wrap_bias_msm), 
       col = "grey", lty = 1, lwd = 1.5)
-lines(fig32$lambda, apply(fig32, 1, wrap_bias_cm), 
+lines(fig3_2$lambda, apply(fig3_2, 1, wrap_bias_cm), 
       col = "grey", lty = 2, lwd = 1.5)
 axis(1, at = c(0, 1), 
      tck = -0.01, cex.axis = 0.75)
 mtext("Prevalence of confounding variable", side = 1, line = 1.5)
-axis(2, at = c(-1.5, 1.5), tck = -0.01, cex.axis = 0.75)
-mtext("bias in average treatment effect", side = 2, line = 1.5)
-mtext(paste("Confounder positively associated", "\n",  "with exposure and outcome"), 
-      side = 3, line = 2)
-legend(0.3, 2, xpd = T, 
-       legend = c("Bias < 0"),
-       fill = c("lightgrey"),
-       border = c("lightgrey"),
-       horiz = T,
+axis(4, at = c(0, 0.5), tck = -0.01, cex.axis = 0.75)
+mtext("bias in average treatment effect", side = 4, line = 1.5)
+legend("topleft", 
+       legend = c("MSM-IPW", "conditional model",
+                  expression(paste(pi[1], " = 0.75, ", pi[0], " = 0.5")),
+                  expression(paste(pi[1], " = 0.75, ", pi[0], " = 0.25"))),
+       lty = c(1, 2, 1, 1),
+       col = c("black", "black", "black", "grey"),
        bty = "n",
-       cex = 0.75,
-       x.intersp = 0.25)
-legend(-0.1, 1.85, xpd = T, 
-       legend = c("MSM-IPW", "conditional model"),
-       lty = c(1, 2),
-       bty = "n",
-       horiz = T,
+       horiz = F,
        cex = 0.75,
        x.intersp = 0.25,
-       seg.len = 1.5,
-       text.width = c(0, 0.3))
+       seg.len = 1.5)
 dev.off()
 
 # ------------------------------------------------------------------------------
