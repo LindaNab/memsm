@@ -1,7 +1,7 @@
 # bias in ATE estimated in marginal structural model using ipw
-bias_msm <- function(p_1, p_0, pi_0, pi_1, gamma, lambda){
+calc_bias_msm <- function(p_1, p_0, pi_0, pi_1, gamma, lambda){
   # P(L_star=1)
-  ell <- p_0 * (1-lambda) + p_1 * lambda
+  ell <- p_0 * (1 - lambda) + p_1 * lambda
   # pi_star = P(A|L_star=l_star)
   pi_star <- function(l_star){
     temp0 <- pi_0 * ((1-p_0)^(1-l_star)*p_0^l_star*(1-lambda)) / 
@@ -20,7 +20,7 @@ bias_msm <- function(p_1, p_0, pi_0, pi_1, gamma, lambda){
     gamma * (phi(1,1) - phi(0,1)) * ell
   return(bias_msm)}
 # bias in ATE estimated in a conditional model
-bias_cm <- function(p_1, p_0, pi_0, pi_1, gamma, lambda){
+calc_bias_cm <- function(p_1, p_0, pi_0, pi_1, gamma, lambda){
   # omega = P(A)
   omega <- pi_0 * (1-lambda) + pi_1 * lambda
   # ell = P(L^*)
@@ -36,7 +36,7 @@ bias_cm <- function(p_1, p_0, pi_0, pi_1, gamma, lambda){
   # phi = P(L|A=a,L_star=l_star)
   phi <- function(a, l_star){
     out <- (lambda*(1-pi_1)^(1-a)*pi_1^a*(1-p_1)^(1-l_star)*p_1^l_star) / 
-      ((1-pi_star(l_star))^(1-a)*pi_star(l_star)^a*(1-ell)^(1-l_star)*ell^l_star)
+     ((1-pi_star(l_star))^(1-a)*pi_star(l_star)^a*(1-ell)^(1-l_star)*ell^l_star)
     return(out)
   }
   #bias
