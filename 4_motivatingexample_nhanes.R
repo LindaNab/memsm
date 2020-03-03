@@ -167,6 +167,15 @@ DataS_s_c$bmi_self_c <- ifelse(DataS_s_c$bmi_self < 25, 0, 1)
 table(DataS_s_c$bmi_c, DataS_s_c$bmi_self_c, dnn = c("bmi", "bmi_self")) #misclassification
 #P(bmi_self = overweight/obese | bmi = overweight/obese) = 925 / (55+925) = 0.94 (spec)
 #P(bmi_self = overweight/obese | bmi = underweight/normal) = 20 / (227 + 20) = 0.08 (1-sens)
+# Sens and spec per treatment
+table(DataS_s_c[DataS_s_c$bpdrug == 1,]$bmi_c, 
+      DataS_s_c[DataS_s_c$bpdrug == 1,]$bmi_self_c, dnn = c("bmi", "bmi_self"))
+412 / (15 + 412) #spec = 0.96
+6 / (6 + 74) #1 - sens = 0.075
+table(DataS_s_c[DataS_s_c$bpdrug == 0,]$bmi_c, 
+      DataS_s_c[DataS_s_c$bpdrug == 0,]$bmi_self_c, dnn = c("bmi", "bmi_self"))
+513 / (40 + 513) #spec = 0.93
+14 / (153 + 14) #1 - sens = 0.084
 
 # Analyse data using using self-reported bmi categories ---------------------------------------
 fit_unadj <- lm(sbpm ~ bpdrug, data = DataS_s_c) #-4.03
@@ -195,7 +204,7 @@ fit_msm <- svyglm(sbpm ~ bpdrug,
 summary(fit_msm) #-3.59
 lower_msm <- fit_msm$coefficients[2] + qnorm(0.975) * summary(fit_msm)$coef[2,2]
 upper_msm <- fit_msm$coefficients[2] - qnorm(0.975) * summary(fit_msm)$coef[2,2]
-temp <- ipwpoint(exposure = bpdrug, 
+temp_me <- ipwpoint(exposure = bpdrug, 
                  family = "binomial", 
                  link = "logit", 
                  denominator = ~ bmi_self_c,
@@ -203,11 +212,34 @@ temp <- ipwpoint(exposure = bpdrug,
                  data = DataS_s_c)
 fit_msm_me <- svyglm(sbpm ~ bpdrug, 
               design = svydesign(~ 1, 
-                                 weights = ~ temp$ipw.weights, 
+                                 weights = ~ temp_me$ipw.weights, 
                                  data = DataS_s_c))
 summary(fit_msm_me) #-3.52
 lower_msm_me <- fit_msm_me$coefficients[2] - qnorm(0.975) * summary(fit_msm_me)$coef[2,2]
 upper_msm_me <- fit_msm_me$coefficients[2] + qnorm(0.975) * summary(fit_msm_me)$coef[2,2]
+
+w00_star <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 0] == 0)
+w10_star <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 0] == 1)
+w01_star <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 1] == 0)
+w11_star <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_self_c == 1] == 1)
+w00_star; w10_star; w01_star; w11_star
+
+w00 <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_c == 0] == 0)
+w10 <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_c == 0] == 1)
+w01 <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_c == 1] == 0)
+w11 <- 1/mean(DataS_s_c$bpdrug[DataS_s_c$bmi_c == 1] == 1)
+w00; w10; w01; w11
+
+DataS_s_c$weight_man <- numeric(NROW(DataS_s_c)) 
+DataS_s_c$weight_man[DataS_s_c$bpdrug == 0 & DataS_s_c$bmi_self_c == 0] <- w00
+DataS_s_c$weight_man[DataS_s_c$bpdrug == 1 & DataS_s_c$bmi_self_c == 0] <- w10
+DataS_s_c$weight_man[DataS_s_c$bpdrug == 0 & DataS_s_c$bmi_self_c == 1] <- w01
+DataS_s_c$weight_man[DataS_s_c$bpdrug == 1 & DataS_s_c$bmi_self_c == 1] <- w11
+
+fit_msm_me_man <- svyglm(sbpm ~ bpdrug, 
+                     design = svydesign(~ 1, 
+                                        weights = ~ weight_man, 
+                                        data = DataS_s_c))
 
 # Sensitivity analysis------------------------------------------------------------------------
 # Parameters in data--------------------------------------------------------------------------

@@ -56,12 +56,30 @@ fig3_1 <- data.frame(spec = 0.95,
 fig3_2 <- fig3_1
 fig3_2$pi_0 <- 0.25
 
-fig4 <- data.frame(spec = seq(from = 0, to = 1, length.out = 100),
+# Figure 4a consist of 1 plot with 2 lines. The x axis of the plot varies spec 
+# from 0 to 1, and the y axis represents bias in the ATE. 1) sens = 0.9, 2) 
+# sens = 0.7
+fig4a_1 <- data.frame(spec = seq(from = 0, to = 1, length.out = 100),
                    sens = 0.9, 
                    pi_0 = 0.5, 
                    pi_1 = 0.75,
                    gamma = 2,
-                   lambda = seq(from = 0, to = 1, length.out = 100))
+                   lambda = 0.5)
+fig4a_2 <- fig4a_1
+fig4a_2$sens <- 0.7
+
+# Figure 4b consist of 1 plot with 2 lines. The x axis of the plot varies sens 
+# from 0 to 1, and the y axis represents bias in the ATE. 1) spec = 0.9, 2) 
+# spec = 0.7
+fig4b_1 <- data.frame(spec = 0.9,
+                      sens = seq(from = 0, to = 1, length.out = 100), 
+                      pi_0 = 0.25, 
+                      pi_1 = 0.75,
+                      gamma = 2,
+                      lambda = 0.5)
+fig4b_2 <- fig4b_1
+fig4b_2$spec <- 0.7
+
 
 png(paste0(figures_dir,"/fig2a.png"), 
     width = 4, height = 4, units = 'in', res = 100)
@@ -140,6 +158,89 @@ legend("topleft",
        legend = c("MSM-IPW", "conditional model",
                   expression(paste(pi[1], " = 0.75, ", pi[0], " = 0.5")),
                   expression(paste(pi[1], " = 0.75, ", pi[0], " = 0.25"))),
+       lty = c(1, 2, 1, 1),
+       col = c("black", "black", "black", "grey"),
+       bty = "n",
+       horiz = F,
+       cex = 0.75,
+       x.intersp = 0.25,
+       seg.len = 1.5)
+dev.off()
+
+max_bias_fig4a <- calc_bias_msm(p_1 = 0.9, p_0 = 0.9, 
+                                pi_0 = 0.5, pi_1 = 0.75, 
+                                gamma = 2, lambda = 0.5)
+
+png(paste0(figures_dir,"/fig4a.png"), 
+    width = 4, height = 4, units = 'in', res = 100)
+par(mgp = c(0, 0.25, 0), mar = c(3.5, 1, 1, 4))
+plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
+     xlim = c(0, 1), ylim = c(0, 1))
+lines((1 - fig4a_1$spec), apply(fig4a_1, 1, wrap_bias_msm), 
+      col = "black", lty = 1, lwd = 1.5)
+lines((1 - fig4a_1$spec), apply(fig4a_1, 1, wrap_bias_cm), 
+      col = "black", lty = 2, lwd = 1.5)
+lines((1 - fig4a_2$spec), apply(fig4a_2, 1, wrap_bias_msm), 
+      col = "grey", lty = 1, lwd = 1.5)
+lines((1 - fig4a_2$spec), apply(fig4a_2, 1, wrap_bias_cm), 
+      col = "grey", lty = 2, lwd = 1.5)
+lines(c(fig4a_1$sens[1], fig4a_1$sens[1]), c(0, 1), col = "lightgrey")
+lines(c(fig4a_2$sens[1], fig4a_2$sens[1]), c(0, 1), col = "lightgrey")
+lines(c(0, 1), c(max_bias_fig4a, max_bias_fig4a), col = "lightgrey")
+axis(1, at = c(0, fig4a_2$sens[1], fig4a_1$sens[1], 1), 
+     label = c("0", fig4a_2$sens[1], fig4a_1$sens[1], "1"),
+     tck = -0.01, cex.axis = 0.75)
+mtext("1 - specificity", side = 1, line = 1.5)
+axis(4, at = c(0, max_bias_fig4a, 1), 
+     label = c("0", paste("max =", round(max_bias_fig4a,2)), "1"),
+     tck = -0.01, cex.axis = 0.75)
+mtext("bias in average treatment effect", side = 4, line = 1.5)
+legend("topleft", 
+       legend = c("MSM-IPW", "conditional model",
+                  "sensitivity = 0.9",
+                  "sensitivity = 0.7"),
+       lty = c(1, 2, 1, 1),
+       col = c("black", "black", "black", "grey"),
+       bty = "n",
+       horiz = F,
+       cex = 0.75,
+       x.intersp = 0.25,
+       seg.len = 1.5)
+dev.off()
+
+max_bias_fig4b <- calc_bias_msm(p_1 = 0.9, p_0 = 0.9, 
+                                pi_0 = 0.25, pi_1 = 0.75, 
+                                gamma = 2, lambda = 0.5)
+
+png(paste0(figures_dir,"/fig4b.png"), 
+    width = 4, height = 4, units = 'in', res = 100)
+par(mgp = c(0, 0.25, 0), mar = c(3.5, 4, 1, 1))
+plot(0, type = "n", xaxt = "n", yaxt = "n", frame.plot = F, ann = F,
+     xlim = c(0, 1), ylim = c(0, 1))
+lines(fig4b_1$sens, apply(fig4b_1, 1, wrap_bias_msm), 
+      col = "black", lty = 1, lwd = 1.5)
+lines(fig4b_1$sens, apply(fig4b_1, 1, wrap_bias_cm), 
+      col = "black", lty = 2, lwd = 1.5)
+lines(fig4b_2$sens, apply(fig4b_2, 1, wrap_bias_msm), 
+      col = "grey", lty = 1, lwd = 1.5)
+lines(fig4b_2$sens, apply(fig4b_2, 1, wrap_bias_cm), 
+      col = "grey", lty = 2, lwd = 1.5)
+lines(c(1 - fig4b_1$spec[1], 1 - fig4b_1$spec[1]), c(0, 1), col = "lightgrey")
+lines(c(1 - fig4b_2$spec[1], 1 - fig4b_2$spec[1]), c(0, 1), col = "lightgrey")
+lines(c(0, 1), c(max_bias_fig4b, max_bias_fig4b), col = "lightgrey")
+axis(1, at = c(0, (1 - fig4b_1$spec[1]), (1 - fig4b_2$spec[1]), 1), 
+     label = c("0", 1 - fig4b_1$spec[1], 1 - fig4b_2$spec[1], "1"),
+     tck = -0.01, cex.axis = 0.75)
+mtext("sensitivity", side = 1, line = 1.5)
+axis(2, at = c(0, 1), 
+     label = c("0", "max = 1"),
+     tck = -0.01, cex.axis = 0.75)
+mtext("bias in average treatment effect", side = 2, line = 1.5)
+legend("bottomright", 
+       legend = c("MSM-IPW", "conditional model",
+                  "1 - specificity = 0.1",
+                  #expression(paste("1 - specificity = 0.1, ", pi[0],  " = 0.25, ", pi[1], " = 0.75" )),
+                  "1 - specificity = 0.3"),
        lty = c(1, 2, 1, 1),
        col = c("black", "black", "black", "grey"),
        bty = "n",
