@@ -340,7 +340,7 @@ axis(1, at = c(-0.8, 0.0, 0.2))
 axis(2, labels = F, at = c(0, 6))
 mtext("bias in average treatment effect", side = 1, line = 2.5)
 mtext("density", side = 2, line = 1.5)
-legend("topright", legend = c("MSM-IPW", "Conditional model"),
+legend("topright", legend = c("MSM-IPW", "conditional model"),
        seg.len = 2, col = c("black", "grey"), lty = c(1, 1), lwd = 1.5,
        bty = 'n', cex = 0.75)
 legend("topleft", legend = c("uniform", "trapezoidal", "triangular"),
